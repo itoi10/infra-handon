@@ -140,7 +140,7 @@ resource "aws_subnet" "sbcntrSubnetPublicIngress1A" {
   vpc_id                  = aws_vpc.sbcntrVpc.id
   cidr_block              = "10.0.0.0/24"
   availability_zone       = "ap-northeast-1a"
-  map_public_ip_on_launch = true #　このサブネットで起動したインスタンンスがパブリックIPv4アドレスを受信する
+  map_public_ip_on_launch = true #　このサブネットで起動したインスタンスがパブリックIPv4アドレスを受信する
   tags = {
     Name = "sbcntr-subnet-private-container-1a"
     Type = "Isolated"
@@ -151,9 +151,221 @@ resource "aws_subnet" "sbcntrSubnetPublicIngress1C" {
   vpc_id                  = aws_vpc.sbcntrVpc.id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "ap-northeast-1c"
-  map_public_ip_on_launch = true #　このサブネットで起動したインスタンンスがパブリックIPv4アドレスを受信する
+  map_public_ip_on_launch = true #　このサブネットで起動したインスタンスがパブリックIPv4アドレスを受信する
   tags = {
     Name = "sbcntr-subnet-private-container-1c"
     Type = "Isolated"
   }
 }
+
+## Ingress用のルートテーブル
+resource "aws_route_table" "sbcntrRouteIngress" {
+  vpc_id = aws_vpc.sbcntrVpc.id
+  tags = {
+    Name = "sbcntr-route-ingress"
+  }
+}
+
+## Ingressサブネットへルート紐付け
+resource "aws_route_table_association" "sbcntrRouteIngressAssociation1A" {
+  route_table_id = aws_route_table.sbcntrRouteIngress.id
+  subnet_id      = aws_subnet.sbcntrSubnetPublicIngress1A.id
+}
+
+resource "aws_route_table_association" "sbcntrRouteIngressAssociation1C" {
+  route_table_id = aws_route_table.sbcntrRouteIngress.id
+  subnet_id      = aws_subnet.sbcntrSubnetPublicIngress1C.id
+}
+
+## Ingress用ルートテーブルのデフォルトルート
+resource "aws_route" "sbcntrRouteIngressDefault" {
+  route_table_id         = aws_route_table.sbcntrRouteIngress.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.sbcntrIgw.id
+  depends_on = [
+    aws_internet_gateway_attachment.sbcntrVpcgwAttachment
+  ]
+}
+
+# 管理用サーバ周りの設定
+## 管理用のパブリックサブネット
+resource "aws_subnet" "sbcntrSubnetPublicManagement1A" {
+  vpc_id                  = aws_vpc.sbcntrVpc.id
+  cidr_block              = "10.0.240.0/24"
+  availability_zone       = "ap-northeast-1a"
+  map_public_ip_on_launch = true #　このサブネットで起動したインスタンスがパブリックIPv4アドレスを受信する
+  tags = {
+    Name = "sbcntr-subnet-public-management-1a"
+    Type = "Public"
+  }
+}
+
+resource "aws_subnet" "sbcntrSubnetPublicManagement1C" {
+  vpc_id                  = aws_vpc.sbcntrVpc.id
+  cidr_block              = "10.0.241.0/24"
+  availability_zone       = "ap-northeast-1c"
+  map_public_ip_on_launch = true #　このサブネットで起動したインスタンスがパブリックIPv4アドレスを受信する
+  tags = {
+    Name = "sbcntr-subnet-public-management-1c"
+    Type = "Public"
+  }
+}
+
+## 管理用サブネットのルートはIngressと同様として作成する
+resource "aws_route_table_association" "sbcntrRouteManagementAssociation1A" {
+  route_table_id = aws_route_table.sbcntrRouteIngress.id
+  subnet_id      = aws_subnet.sbcntrSubnetPublicManagement1A.id
+}
+
+resource "aws_route_table_association" "sbcntrRouteManagementAssociation1C" {
+  route_table_id = aws_route_table.sbcntrRouteIngress.id
+  subnet_id      = aws_subnet.sbcntrSubnetPublicManagement1C.id
+}
+
+
+# インターネットへ通信するためのゲートウェイの作成
+resource "aws_internet_gateway" "sbcntrIgw" {
+  tags = {
+    Name = "sbcntr-igw"
+  }
+}
+
+# IGWをVPCにアタッチしインターネットとVPC間の通信を可能にする
+resource "aws_internet_gateway_attachment" "sbcntrVpcgwAttachment" {
+  vpc_id              = aws_vpc.sbcntrVpc.id
+  internet_gateway_id = aws_internet_gateway.sbcntrIgw.id
+}
+
+
+############### Security groups ###############
+# セキュリティグループの生成
+## インターネット公開のセキュリティグループの生成
+resource "aws_security_group" "sbcntrSgIngress" {
+  name        = "ingress"
+  description = "Security group for ingress"
+
+  egress {
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic by default"
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+  }
+
+  ingress {
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "from 0.0.0.0/0:80"
+    protocol    = "tcp"
+    from_port   = 80
+    to_port     = 80
+  }
+
+  ingress {
+    ipv6_cidr_blocks = ["::/0"]
+    description      = "from ::/0:80"
+    protocol         = "tcp"
+    from_port        = 80
+    to_port          = 80
+  }
+
+  vpc_id = aws_vpc.sbcntrVpc.id
+  tags = {
+    Name = "sbcntr-sg-ingress"
+  }
+}
+
+## 管理用サーバ向けのセキュリティグループの生成
+resource "aws_security_group" "sbcntrSgManagement" {
+  name        = "management"
+  description = "Security Group of management server"
+
+  egress {
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic by default"
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+  }
+
+  vpc_id = aws_vpc.sbcntrVpc.id
+  tags = {
+    Name = "sbcntr-sg-management"
+  }
+}
+
+## バックエンドコンテナアプリ用セキュリティグループの生成
+resource "aws_security_group" "sbcntrSgContainer" {
+  name        = "container"
+  description = "Security Group of backend app"
+
+  egress {
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic by default"
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+  }
+
+  vpc_id = aws_vpc.sbcntrVpc.id
+  tags = {
+    Name = "sbcntr-sg-container"
+  }
+}
+
+## フロントエンドコンテナアプリ用セキュリティグループの生成
+resource "aws_security_group" "sbcntrSgFrontContainer" {
+  name        = "front-container"
+  description = "Security Group of front container app"
+
+  egress {
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic by default"
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+  }
+
+  vpc_id = aws_vpc.sbcntrVpc.id
+  tags = {
+    Name = "sbcntr-sg-front-container"
+  }
+}
+
+## 内部用ロードバランサ用のセキュリティグループの生成
+resource "aws_security_group" "sbcntrSgInternal" {
+  name        = "internal"
+  description = "Security group for internal load balancer"
+
+  egress {
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic by default"
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+  }
+
+  vpc_id = aws_vpc.sbcntrVpc.id
+  tags = {
+    Name = "sbcntr-sg-internal"
+  }
+}
+
+## DB用セキュリティグループの生成
+resource "aws_security_group" "sbcntrSgDb" {
+  name        = "database"
+  description = "Security Group of database"
+
+  egress {
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic by default"
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+  }
+
+  vpc_id = aws_vpc.sbcntrVpc.id
+  tags = {
+    Name = "sbcntr-sg-db"
+  }
+}
+
