@@ -1,0 +1,574 @@
+# テンプレートバージョン "2010-09-09"で固定
+AWSTemplateFormatVersion: "2010-09-09"
+# 任意: テンプレートの説明
+Description: Network resource template part1
+
+# 構築するリソース
+Resources:
+  # 論理ID。テンプレート内で一意なID。テンプレートの他の部分尾リソースを参照するために使用する。
+  # VPCの設定
+  sbcntrVpc:
+    # 作成するリソースのタイプ
+    # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc.html
+    Type: AWS::EC2::VPC
+    Properties:
+      # VPCのIPv4ネットワーク範囲
+      CidrBlock: 10.0.0.0/16
+      # インスタンスがDNSホスト名を取得するか
+      EnableDnsHostnames: true
+      # DNS解決がサポートされているか
+      EnableDnsSupport: true
+      # インスタンスを専用のハードウェア上で実行するか等の指定。デフォルトは共有ハードウェア上で実行。
+      # 専有だと料金は上がるがセキュリティ面を考慮し他のアカウントと同居したくないときに選択する。
+      InstanceTenancy: default
+      # リソースタグ。リソースの識別や分類に使える。
+      Tags:
+        - Key: Name
+          Value: sbcntrVpc
+
+  ############### Subnet, RouteTable, IGW ###############
+  # コンテナ周りの設定
+  ## コンテナアプリ用のプライベートサブネット
+  # プライベートサブネット1A
+  sbcntrSubnetPrivateContainer1A:
+    # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
+    Type: AWS::EC2::Subnet
+    Properties:
+      # サブネットに割り当てられたIPv4 CIDRブロック。
+      CidrBlock: 10.0.8.0/24
+      # サブネットが所属するVPCのID
+      VpcId:
+        Ref: sbcntrVpc
+      # サブネットのAZ(アベイラビリティゾーン)
+      AvailabilityZone:
+        # 組み込み関数Fn::Select 第二引数のリストから第一引数の値番目を取得する
+        # ここでは1aのAZ
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: "" # 全てのAZを取得できる関数 (ただしデフォルトサブネットがある場合は動作が変わる)
+      # このサブネットで起動したインスタンスがパブリックIPv4アドレスを受信するか。プライベートなのでfalse
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: sbcntr-subnet-private-container-1a
+        - Key: Type
+          Value: Isolated
+
+  # プライベートサブネット1C
+  sbcntrSubnetPrivateContainer1C:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.9.0/24
+      VpcId:
+        Ref: sbcntrVpc
+      AvailabilityZone:
+        # ここでは1c
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: sbcntr-subnet-private-container-1c
+        - Key: Type
+          Value: Isolated
+
+  ## コンテナアプリ用のルートテーブル
+  # ルートテーブル ネットワークの経路を設定するコンポーネント
+  # ルートテーブルを作成した後、ルートを追加しテーブルをサブネットに関連づけることができる。
+  sbcntrRouteApp:
+    # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-routetable.html
+    Type: AWS::EC2::RouteTable
+    Properties:
+      # VPCのID
+      VpcId:
+        Ref: sbcntrVpc
+      Tags:
+        - Key: Name
+          Value: sbcntr-route-app
+
+  ## コンテナサブネットへルート紐付け
+  # サブネットとルートテーブルを関連付ける
+  sbcntrRouteAppAssociation1A:
+    # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnetroutetableassociation.html
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      # ルートテーブルのID
+      RouteTableId:
+        Ref: sbcntrRouteApp
+      # サブネットのID
+      SubnetId:
+        Ref: sbcntrSubnetPrivateContainer1A
+
+  sbcntrRouteAppAssociation1C:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: sbcntrRouteApp
+      SubnetId:
+        Ref: sbcntrSubnetPrivateContainer1C
+
+  # DB周りの設定
+  ## DB用のプライベートサブネット
+  sbcntrSubnetPrivateDb1A:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.16.0/24
+      VpcId:
+        Ref: sbcntrVpc
+      AvailabilityZone:
+        # 1a
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: sbcntr-subnet-private-db-1a
+        - Key: Type
+          Value: Isolated
+
+  sbcntrSubnetPrivateDb1C:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.17.0/24
+      VpcId:
+        Ref: sbcntrVpc
+      AvailabilityZone:
+        # 1c
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: sbcntr-subnet-private-db-1c
+        - Key: Type
+          Value: Isolated
+
+  ## DB用のルートテーブル
+  sbcntrRouteDb:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: sbcntrVpc
+      Tags:
+        - Key: Name
+          Value: sbcntr-route-db
+
+  ## DBサブネットへルート紐付け
+  sbcntrRouteDbAssociation1A:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: sbcntrRouteDb
+      SubnetId:
+        Ref: sbcntrSubnetPrivateDb1A
+
+  sbcntrRouteDbAssociation1C:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: sbcntrRouteDb
+      SubnetId:
+        Ref: sbcntrSubnetPrivateDb1C
+
+  # Ingress周りの設定
+  ## Ingress用のパブリックサブネット
+  sbcntrSubnetPublicIngress1A:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.0.0/24
+      VpcId:
+        Ref: sbcntrVpc
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: sbcntr-subnet-public-ingress-1a
+        - Key: Type
+          Value: Public
+
+  sbcntrSubnetPublicIngress1C:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.1.0/24
+      VpcId:
+        Ref: sbcntrVpc
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: sbcntr-subnet-public-ingress-1c
+        - Key: Type
+          Value: Public
+
+  ## Ingress用のルートテーブル
+  sbcntrRouteIngress:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: sbcntrVpc
+      Tags:
+        - Key: Name
+          Value: sbcntr-route-ingress
+
+  ## Ingressサブネットへルート紐付け
+  sbcntrRouteIngressAssociation1A:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: sbcntrRouteIngress
+      SubnetId:
+        Ref: sbcntrSubnetPublicIngress1A
+
+  sbcntrRouteIngressAssociation1C:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: sbcntrRouteIngress
+      SubnetId:
+        Ref: sbcntrSubnetPublicIngress1C
+
+  ## Ingress用ルートテーブルのデフォルトルート
+  sbcntrRouteIngressDefault:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: sbcntrRouteIngress
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: sbcntrIgw
+    DependsOn:
+      - sbcntrVpcgwAttachment
+
+  # 管理用サーバ周りの設定
+  ## 管理用のパブリックサブネット
+  sbcntrSubnetPublicManagement1A:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.240.0/24
+      VpcId:
+        Ref: sbcntrVpc
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: sbcntr-subnet-public-management-1a
+        - Key: Type
+          Value: Public
+
+  sbcntrSubnetPublicManagement1C:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.241.0/24
+      VpcId:
+        Ref: sbcntrVpc
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: sbcntr-subnet-public-management-1c
+        - Key: Type
+          Value: Public
+
+  ## 管理用サブネットのルートはIngressと同様として作成する
+  sbcntrRouteManagementAssociation1A:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: sbcntrRouteIngress
+      SubnetId:
+        Ref: sbcntrSubnetPublicManagement1A
+
+  sbcntrRouteManagementAssociation1C:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: sbcntrRouteIngress
+      SubnetId:
+        Ref: sbcntrSubnetPublicManagement1C
+
+  # インターネットへ通信するためのゲートウェイの作成
+  sbcntrIgw:
+    # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-internetgateway.html
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      # 必須項目なし
+      Tags:
+        - Key: Name
+          Value: sbcntr-igw
+
+  # IGWをVPCにアタッチしインターネットとVPC間の通信を可能にする
+  sbcntrVpcgwAttachment:
+    # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc-gateway-attachment.html
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      # VPCのID
+      VpcId:
+        Ref: sbcntrVpc
+      # IGWのID この項目は任意だがInternetGatewayIdまたはVpnGatewayIdのどちらかを指定する必要あり。
+      InternetGatewayId:
+        Ref: sbcntrIgw
+
+  ############### Security groups ###############
+  # セキュリティグループの生成
+  ## インターネット公開のセキュリティグループの生成
+  sbcntrSgIngress:
+    # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      # SGの説明 必須
+      GroupDescription: Security group for ingress
+      # SGの名前 任意
+      GroupName: ingress
+
+      # アウトバウンドルール
+      SecurityGroupEgress:
+        # 範囲をIPv4アドレスで指定
+        - CidrIp: 0.0.0.0/0
+          # 説明
+          Description: Allow all outbound traffic by default
+          # プロトコル名 全てのプロトコルを指定するには-1を指定
+          IpProtocol: "-1"
+
+      # インバウンドルール
+      SecurityGroupIngress:
+        # 範囲をIPv4アドレスで指定
+        - CidrIp: 0.0.0.0/0
+          # 説明
+          Description: from 0.0.0.0/0:80
+          # TPCおよびUPDのポート範囲の開始位置
+          FromPort: 80
+          # プロコトル名
+          IpProtocol: tcp
+          # TCPおよびUPDのポート範囲の終端
+          ToPort: 80
+
+          # 範囲をIPv6アドレスで指定
+        - CidrIpv6: ::/0
+          Description: from ::/0:80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+      Tags:
+        - Key: Name
+          Value: sbcntr-sg-ingress
+
+      # SGのVPC
+      VpcId:
+        Ref: sbcntrVpc
+
+  ## 管理用サーバ向けのセキュリティグループの生成
+  sbcntrSgManagement:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group of management server
+      GroupName: management
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: sbcntr-sg-management
+      VpcId:
+        Ref: sbcntrVpc
+
+  ## バックエンドコンテナアプリ用セキュリティグループの生成
+  sbcntrSgContainer:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group of backend app
+      GroupName: container
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: sbcntr-sg-container
+      VpcId:
+        Ref: sbcntrVpc
+
+  ## フロントエンドコンテナアプリ用セキュリティグループの生成
+  sbcntrSgFrontContainer:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group of front container app
+      GroupName: front-container
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: sbcntr-sg-front-container
+      VpcId:
+        Ref: sbcntrVpc
+
+  ## 内部用ロードバランサ用のセキュリティグループの生成
+  sbcntrSgInternal:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for internal load balancer
+      GroupName: internal
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: sbcntr-sg-internal
+      VpcId:
+        Ref: sbcntrVpc
+
+  ## DB用セキュリティグループの生成
+  sbcntrSgDb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group of database
+      GroupName: database
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: sbcntr-sg-db
+      VpcId:
+        Ref: sbcntrVpc
+
+  # ルール紐付け
+  ## Internet LB -> Front Container
+  # EC2::SecurityGroupの中で自分自身を参照するとエラーとなるのでEC2::SecurityGroupEgress,EC2::SecurityGroupIngressを使用する。
+  sbcntrSgFrontContainerFromsSgIngress:
+    # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group-ingress.html
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: HTTP for Ingress
+      FromPort: 80
+      # SGのID
+      GroupId:
+        # フロントエンドコンテナアプリ用セキュリティグループ
+        Fn::GetAtt:
+          - sbcntrSgFrontContainer
+          - GroupId
+      # ソースSGのID
+      SourceSecurityGroupId:
+        # インターネット公開のセキュリティグループ
+        Fn::GetAtt:
+          - sbcntrSgIngress
+          - GroupId
+      ToPort: 80
+
+  ## Front Container -> Internal LB
+  sbcntrSgInternalFromSgFrontContainer:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: HTTP for front container
+      FromPort: 80
+      GroupId:
+        Fn::GetAtt:
+          - sbcntrSgInternal
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - sbcntrSgFrontContainer
+          - GroupId
+      ToPort: 80
+
+  ## Internal LB -> Back Container
+  sbcntrSgContainerFromSgInternal:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: HTTP for internal lb
+      FromPort: 80
+      GroupId:
+        Fn::GetAtt:
+          - sbcntrSgContainer
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - sbcntrSgInternal
+          - GroupId
+      ToPort: 80
+  ## Back container -> DB
+  sbcntrSgDbFromSgContainerTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: MySQL protocol from backend App
+      FromPort: 3306
+      GroupId:
+        Fn::GetAtt:
+          - sbcntrSgDb
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - sbcntrSgContainer
+          - GroupId
+      ToPort: 3306
+  ## Front container -> DB
+  sbcntrSgDbFromSgFrontContainerTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: MySQL protocol from frontend App
+      FromPort: 3306
+      GroupId:
+        Fn::GetAtt:
+          - sbcntrSgDb
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - sbcntrSgFrontContainer
+          - GroupId
+      ToPort: 3306
+  ## Management server -> DB
+  sbcntrSgDbFromSgManagementTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: MySQL protocol from management server
+      FromPort: 3306
+      GroupId:
+        Fn::GetAtt:
+          - sbcntrSgDb
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - sbcntrSgManagement
+          - GroupId
+      ToPort: 3306
+  ## Management server -> Internal LB
+  sbcntrSgInternalFromSgManagementTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: HTTP for management server
+      FromPort: 80
+      GroupId:
+        Fn::GetAtt:
+          - sbcntrSgInternal
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - sbcntrSgManagement
+          - GroupId
+      ToPort: 80
