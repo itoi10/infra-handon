@@ -369,3 +369,80 @@ resource "aws_security_group" "sbcntrSgDb" {
   }
 }
 
+# ルール紐付け
+## Internet LB -> Front Container
+resource "aws_security_group_rule" "sbcntrSgFrontContainerFromsSgIngress" {
+  type                     = "ingress"
+  description              = "HTTP for Ingress"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.sbcntrSgFrontContainer.id
+  source_security_group_id = aws_security_group.sbcntrSgIngress.id
+}
+
+## Front Container -> Internal LB
+resource "aws_security_group_rule" "sbcntrSgInternalFromSgFrontContainer" {
+  type                     = "ingress"
+  description              = "HTTP for front container"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.sbcntrSgInternal.id
+  source_security_group_id = aws_security_group.sbcntrSgFrontContainer.id
+}
+
+## Internal LB -> Back Container
+resource "aws_security_group_rule" "sbcntrSgContainerFromSgInternal" {
+  type                     = "ingress"
+  description              = "HTTP for internal lb"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.sbcntrSgContainer.id
+  source_security_group_id = aws_security_group.sbcntrSgInternal.id
+}
+
+## Back container -> DB
+resource "aws_security_group_rule" "sbcntrSgDbFromSgContainerTCP" {
+  type                     = "ingress"
+  description              = "MySQL protocol from backend App"
+  from_port                = 3306
+  to_port                  = 3306
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.sbcntrSgDb.id
+  source_security_group_id = aws_security_group.sbcntrSgContainer.id
+}
+
+## Front container -> DB
+resource "aws_security_group_rule" "sbcntrSgDbFromSgFrontContainerTCP" {
+  type                     = "ingress"
+  description              = "MySQL protocol from frontend App"
+  from_port                = 3306
+  to_port                  = 3306
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.sbcntrSgDb.id
+  source_security_group_id = aws_security_group.sbcntrSgFrontContainer.id
+}
+
+## Management server -> DB
+resource "aws_security_group_rule" "sbcntrSgDbFromSgManagementTCP" {
+  type                     = "ingress"
+  description              = "MySQL protocol from management server"
+  from_port                = 3306
+  to_port                  = 3306
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.sbcntrSgDb.id
+  source_security_group_id = aws_security_group.sbcntrSgManagement.id
+}
+
+## Management server -> Internal LB
+resource "aws_security_group_rule" "sbcntrSgInternalFromSgManagementTCP" {
+  type                     = "ingress"
+  description              = "HTTP for management server"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.sbcntrSgInternal.id
+  source_security_group_id = aws_security_group.sbcntrSgManagement.id
+}
