@@ -2,11 +2,13 @@
 
 
 - tf version
-1.2.5
+
+  1.2.5
 
 - tfコマンド
-plan, apply, destroy, state list, state show (rs), state pull
- 
+
+  plan, apply, destroy, state list, state show (rs), state pull
+
 
 参考
 
