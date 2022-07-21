@@ -52,6 +52,25 @@ resource "aws_vpc_endpoint" "sbcntrVpceEcrDkr" {
   }
 }
 
+# CloudWatch Logs用
+resource "aws_vpc_endpoint" "sbcntrVpceLogs" {
+  vpc_endpoint_type = "Interface"
+  # logs
+  service_name = "com.amazonaws.ap-northeast-1.logs"
+  vpc_id       = aws_vpc.sbcntrVpc.id
+  subnet_ids = [
+    aws_subnet.sbcntrSubnetPrivateEgress1A.id,
+    aws_subnet.sbcntrSubnetPrivateEgress1C.id
+  ]
+  private_dns_enabled = true
+  security_group_ids = [
+    aws_security_group.sbcntrSgIngress.id
+  ]
+  tags = {
+    Name = "sbcntr-vpce-logs"
+  }
+}
+
 # S3
 resource "aws_vpc_endpoint" "sbcntrVpceS3" {
   # ゲートウェイ型
@@ -67,3 +86,32 @@ resource "aws_vpc_endpoint" "sbcntrVpceS3" {
     Name = "sbcntr-vpce-s3"
   }
 }
+
+#----------------------------------------------------------------
+# ALB
+#----------------------------------------------------------------
+# 時間（または1時間未満）あたり、0.0243USD
+# LCU時間（または1時間未満）あたり、0.008USD
+
+# 内部用ロードバランサ
+resource "aws_lb" "sbcntrAlbInternal" {
+  name = "sbcntr-alb-internal"
+  # 内部向け
+  internal = true
+  # ALB
+  load_balancer_type = "application"
+  subnets = [
+    aws_subnet.sbcntrSubnetPrivateContainer1A.id,
+    aws_subnet.sbcntrSubnetPrivateContainer1C.id
+  ]
+  security_groups = [
+    aws_security_group.sbcntrSgInternal.id
+  ]
+}
+
+# TerraformでALBを作成する
+# https://qiita.com/gogo-muscle/items/81d9f73f16f901d95424
+
+# ターゲットグループ
+
+# リスナー
