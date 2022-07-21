@@ -1,0 +1,5 @@
+- cloud9_ecr_policy.json
+Cloud9用のIAMポリシー
+
+- resize.sh
+Cloud9上で実行してEBSボリュームを増やすシェル
