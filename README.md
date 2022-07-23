@@ -23,6 +23,7 @@ chaliecはAWS LambdaでサーバレスアプリをPythonで構築するための
 - 削除     chalice delete --stage dev 
 - ローカル  chalice local --stage dev --port 8080
 
+chalicelibディレクトリ以下はapp.pyと合わせてAWSにデプロイされる
 
 
 参考
