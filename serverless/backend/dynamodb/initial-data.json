@@ -1,0 +1,67 @@
+{
+    "Todos": [
+        {
+            "PutRequest": {
+                "Item": {
+                    "id": {
+                        "S": "1"
+                    },
+                    "title": {
+                        "S": "次に見る"
+                    },
+                    "memo": {
+                        "S": "ゴールデンカムイ"
+                    },
+                    "priority": {
+                        "N": "3"
+                    },
+                    "completed": {
+                        "BOOL": false
+                    }
+                }
+            }
+        },
+        {
+            "PutRequest": {
+                "Item": {
+                    "id": {
+                        "S": "2"
+                    },
+                    "title": {
+                        "S": "買い物"
+                    },
+                    "memo": {
+                        "S": "納豆"
+                    },
+                    "priority": {
+                        "N": "2"
+                    },
+                    "completed": {
+                        "BOOL": false
+                    }
+                }
+            }
+        },
+        {
+            "PutRequest": {
+                "Item": {
+                    "id": {
+                        "S": "3"
+                    },
+                    "title": {
+                        "S": "本"
+                    },
+                    "memo": {
+                        "S": "『渋谷ではたらく社長の告白』"
+                    },
+                    "priority": {
+                        "N": "1"
+                    },
+                    "completed": {
+                        "BOOL": false
+                    }
+                }
+            }
+        }
+    ]
+}

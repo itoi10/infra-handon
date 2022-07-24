@@ -1,38 +1,29 @@
-# NOTE 本格的な実装は後でする
-# とりあえずスタブ
+import os
+import boto3
+from boto3.dynamodb.conditions import Key
 
-# 擬似データベース定義
-SAMPLE_DB = [
-    {
-    'id': '1',
-    'title': '次に見る',
-    'memo': 'ゴールデンカムイ',
-    'priority': 3,
-    'completed': False,
-    },
-    {
-    'id': '2',
-    'title': '買い物',
-    'memo': '納豆',
-    'priority': 2,
-    'completed': False,
-    },
-    {
-    'id': '3',
-    'title': '本',
-    'memo': '『渋谷ではたらく社長の告白』',
-    'priority': 1,
-    'completed': False,
-    },
-]
+# 環境変数からDB接続情報を取得
+def _get_database():
+    endpoint = os.environ.get('DB_ENDPOINT')
+    if endpoint:
+        return boto3.resource('dynamodb', endpoint_url=endpoint)
+    else:
+        boto3.resource('dynamodb')
 
 # 全レコード取得
 def get_all_todos():
-    return SAMPLE_DB
+    table = _get_database().Table(os.environ['DB_TABLE_NAME'])
+    responce = table.scan()
+    return responce['Items']
 
 # 指定されたIDのレコード取得
 def get_todo(todo_id):
-    for todo in SAMPLE_DB:
-        if todo['id'] == todo_id:
-            return todo
-    return None
+    table = _get_database().Table(os.environ['DB_TABLE_NAME'])
+    responce = table.query(
+        KeyConditionExpression=Key('id').eq(todo_id)
+    )
+    items = responce['Items']
+    if items:
+        return items[0] 
+    else:
+        return None

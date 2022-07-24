@@ -25,6 +25,9 @@ chaliecはAWS LambdaでサーバレスアプリをPythonで構築するための
 
 chalicelibディレクトリ以下はapp.pyと合わせてAWSにデプロイされる
 
+DBはDynamoDB
+Lamdbaはリクエスト毎に別々のコンテナで実行されRDSを使った場合、それぞれにコネクションが張られるので同時リクエスト数が増えるとRDSでは限界が来る。
+DynamoDBは分散型KeyValueストアで、アクセスが増えてもスケーリングで対応できる。
 
 参考
 
