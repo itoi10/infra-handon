@@ -19,8 +19,8 @@ chaliecはAWS LambdaでサーバレスアプリをPythonで構築するための
 
 
 - 新規作成  chalice new-project <name>
-- デプロイ  chalice deploy --stage dev      
-- 削除     chalice delete --stage dev 
+- デプロイ  chalice deploy --stage prod     
+- 削除     chalice delete --stage prod>      
 - ローカル  chalice local --stage dev --port 8080
 
 chalicelibディレクトリ以下はapp.pyと合わせてAWSにデプロイされる
@@ -28,6 +28,22 @@ chalicelibディレクトリ以下はapp.pyと合わせてAWSにデプロイさ�
 DBはDynamoDB
 Lamdbaはリクエスト毎に別々のコンテナで実行されRDSを使った場合、それぞれにコネクションが張られるので同時リクエスト数が増えるとRDSでは限界が来る。
 DynamoDBは分散型KeyValueストアで、アクセスが増えてもスケーリングで対応できる。
+
+- テーブル作成 aws dynamodb create-table --cli-input-json file://schema.json
+- 初期データ登録 aws dynamodb batch-write-item --request-items file://initial-data.json
+
+WebAPI使用
+- GET /todos 全取得
+- GET /todos/{todo_id} 取得
+- POST /todos 登録
+- PUT /todos/{todos_id} 更新
+- DELETE /todos/{todo_id} 削除
+
+policy-prod.json
+
+Lamdba関数にDynamoDBにアクセスするためのIAMロールを割り当てる。
+boto3.clientならデプロイ時に自動で必要なIAMロールを作成されるがboto3.resourceは対応していない。
+
 
 参考
 
