@@ -20,8 +20,8 @@ chaliecはAWS LambdaでサーバレスアプリをPythonで構築するための
 
 - 新規作成  chalice new-project <name>
 - デプロイ  chalice deploy --stage prod     
-- 削除     chalice delete --stage prod>      
-- ローカル  chalice local --stage dev --port 8080
+- 削除     chalice delete --stage prod
+- ローカル  chalice local --stage dev --port 8000
 
 chalicelibディレクトリ以下はapp.pyと合わせてAWSにデプロイされる
 
@@ -44,6 +44,8 @@ policy-prod.json
 Lamdba関数にDynamoDBにアクセスするためのIAMロールを割り当てる。
 boto3.clientならデプロイ時に自動で必要なIAMロールを作成されるがboto3.resourceは対応していない。
 
+CORS対応
+@app.routeの引数に cors=True を追加すればAccess-Control-Allow-Origin: *　になる
 
 参考
 
