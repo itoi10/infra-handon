@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Bootstrap -->
+  <link rel="stylesheet" href="http://cdn.honokak.osaka/honoka/4.3.1/css/bootstrap.min.css">
+  <title>Todo App</title>
+</head>
+<body>
+  <nav class="navbar-dark bg-dark">
+    <a href="#" class="navbar-brand">
+      Todo App
+    </a>
+    <button
+      class="btn btn-outline-warning"
+      id="new-todo"
+      data-toggle="modal"
+      data-target="#input-form"
+    >
+      新規登録
+    </button>
+  </nav>
+
+  <table class="table table-hover">
+    <thead>
+      <th scope="col"></th>
+      <th scope="col">タイトル</th>
+      <th scope="col">メモ</th>
+      <th scope="col">優先度</th>
+      <th scope="col"></th>
+      <th scope="col"></th>
+    </thead>
+    <!-- Todo表示領域 -->
+    <tbody id="todo-list"></tbody>
+  </table>
+
+  <div
+    class="modal fade"
+    id="input-form"
+    tabindex="-1"
+    role="dialog"  
+  >
+    <div
+      class="modal-dialog modal-dialog-centered"
+      role="document"
+    >
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modal-title"></h5>
+          <button
+            class="close"
+            type="button"
+            data-dismiss="modal"
+            aria-label="Close"
+          >
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="modal-todo-id" />
+          <div class="form-group">
+            <label for="modal-todo-title">タイトル</label>
+            <input type="text" class="form-control" id="modal-todo-title" />
+          </div>
+          <div class="form-group">
+            <label for="modal-todo-memo">メモ</label>
+            <input type="text" class="form-control" id="modal-todo-memo" />
+          </div>
+          <div class="form-group">
+            <label for="modal-todo-priority">優先度</label>
+            <select type="text" class="form-control" id="modal-todo-priority">
+              <option value="1">低</option>
+              <option value="2">中</option>
+              <option value="3">高</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-secondary"
+            type="button"
+            data-dismiss="modal"
+          >
+            閉じる
+          </button>
+          <button
+            class="btn btn-primary"
+            type="button"
+            id="register-button"
+          >
+            登録
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.15.0/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  <script type="module" src="__target__/frontend.js"></script>
+</body>
+</html>
