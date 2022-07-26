@@ -47,6 +47,15 @@ boto3.clientならデプロイ時に自動で必要なIAMロールを作成さ�
 CORS対応
 @app.routeの引数に cors=True を追加すればAccess-Control-Allow-Origin: *　になる
 
+
+起動方法(ローカル)
+- ローカル用DynamoDB
+  ```java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb -port 8001```
+- backend
+  ```chalice local --stage dev --port 8000```
+- frontend
+  ```python -m http.server 8002```
+
 参考
 
 - aws-container
