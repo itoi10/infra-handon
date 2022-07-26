@@ -27,10 +27,10 @@ class Model:
     def load_all_todos(self):
         S.ajax({"url": f"{BASE_URL}todos", "type": "GET",}).done(
             # 成功
-            self._success_load_all_todos()
+            self._success_load_all_todos
         ).fail(
             # 失敗
-            lambda d: alert("APIサーバとの通信に失敗しました")
+            lambda d: alert("サーバーとの通信に失敗しました。")
         )
 
     def _success_load_all_todos(self, data):
