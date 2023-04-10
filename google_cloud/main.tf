@@ -11,7 +11,7 @@ terraform {
 
 variable "project_name" {
   type    = string
-  default = "my-project"
+  default = "MY_PROJECT_NAME"
 }
 
 // Provider
@@ -78,4 +78,37 @@ resource "google_compute_instance" "default" {
       # Include this section to give the VM an external IP address
     }
   }
+}
+
+// Firewall SSH
+resource "google_compute_firewall" "ssh" {
+  name = "allow-ssh"
+  allow {
+    ports    = ["22"]
+    protocol = "tcp"
+  }
+  direction = "INGRESS"
+  network   = google_compute_network.vpc_network.id
+  // ルールの優先度
+  priority      = 1000
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["ssh"]
+}
+
+// Firewall Flask(:5000)
+resource "google_compute_firewall" "flask" {
+  name    = "flask-app-firewall"
+  network = google_compute_network.vpc_network.id
+
+  allow {
+    protocol = "tcp"
+    ports    = ["5000"]
+  }
+  source_ranges = ["0.0.0.0/0"]
+}
+
+
+// WebサーバーのURLを出力
+output "Web-server-URL" {
+  value = join("", ["http://", google_compute_instance.default.network_interface.0.access_config.0.nat_ip, ":5000"])
 }
