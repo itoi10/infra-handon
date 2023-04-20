@@ -1,13 +1,11 @@
-# ServiceAccountを作成する
+# Creating a Service Account
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: admin-user
-  namespace: kube-system
-
+  namespace: kubernetes-dashboard
 ---
-
-# ServiceAccountにクラスター管理者権限を付与する
+# Creating a ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -19,16 +17,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: admin-user
-  namespace: kube-system
-
----
-
-# ServiceAccountに紐づくシークレットトークンを作成する
-apiVersion: v1
-kind: Secret
-metadata:
-  name: admin-user-token
-  namespace: kube-system
-  annotations:
-    kubernetes.io/service-account.name: admin-user
-type: kubernetes.io/service-account-token
+  namespace: kubernetes-dashboard

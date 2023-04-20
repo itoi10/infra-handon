@@ -14,12 +14,12 @@ $ kubectl config get-contexts
 ```
 $ kubectl apply -f add-admin-user.yaml
 ```
-トークン表示
+認証トークン取得
 ```
-$ kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
+$ kubectl -n kubernetes-dashboard create token admin-user
 ```
 
-- ダッシュボードUIインストール
+- ダッシュボードインストール
 
 ```
 $ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
@@ -30,10 +30,8 @@ http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kube
 
 
 
+- Reference
 
-
-- ref
-
-https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/
-
+https://github.com/kubernetes/dashboard
+https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md
 https://matsuand.github.io/docs.docker.jp.onthefly/desktop/kubernetes/
