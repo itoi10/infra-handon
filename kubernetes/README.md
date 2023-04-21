@@ -10,22 +10,27 @@ $ kubectl config get-contexts
 ```
 
 
+
+
+- ダッシュボードインストール
+
+```
+$ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
+```
+
 - サービスアカウント作成
 ```
-$ kubectl apply -f add-admin-user.yaml
+$ kubectl apply -f dashboard-adminuser.yaml
 ```
 認証トークン取得
 ```
 $ kubectl -n kubernetes-dashboard create token admin-user
 ```
 
-- ダッシュボードインストール
-
+- アクセス
 ```
-$ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
 $ kubectl proxy
 ```
-
 http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/.
 
 
