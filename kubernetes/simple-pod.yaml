@@ -4,13 +4,15 @@ metadata:
   name: simple-echo # Resorce name
 spec:
   containers:
+  # nginx (:80 -> :8080)
   - name: nginx # Container name [nginx]
     image: gihyodocker/nginx-proxy:latest # Container image
     env:
     - name: BACKEND_HOST # Proxy target host
-      value: "http://localhost:8080"
+      value: localhost:8080
     ports:
     - containerPort: 80
+  # echo (:8080)
   - name: echo # Container name [echo]
     image: gihyodocker/echo:latest
     ports:
